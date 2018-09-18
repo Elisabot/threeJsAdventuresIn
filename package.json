@@ -1,0 +1,17 @@
+{
+  "name": "threeJsAdventuresIn",
+  "version": "1.0.0",
+  "description": "a place to play around with temporary explorations",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "elisabot",
+  "license": "ISC",
+  "dependencies": {
+    "three": "^0.96.0"
+  },
+  "devDependencies": {
+    "webpack": "^4.19.0"
+  }
+}
