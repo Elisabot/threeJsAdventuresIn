@@ -12,43 +12,79 @@
     </style>
   </head>
   <body>
-    <script src="js/three.js"></script>
+    <script src="js/build/three.js"></script>
     <script>
 var scene = new THREE.Scene()
-scene.background = new THREE.Color(0xf2f2f2)
+scene.background = new THREE.Color(0xccffcc)
 var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
 
 var renderer = new THREE.WebGLRenderer()
 renderer.setSize(window.innerWidth, window.innerHeight)
 document.body.appendChild(renderer.domElement)
 
-// cube object
-var lead = new THREE.BoxGeometry(1, 2, 1)
-var geometry2 = lead.clone()
-var geometry3 = lead.clone()
+var loader = new THREE.FontLoader()
+loader.load('js/examples/fonts/droid/droid_sans_bold.typeface.json', function (font) {
+  var textGeometry = new THREE.TextBufferGeometry("it's a", {
+    font: font,
+    size: 1,
+    height: 0.05,
+    curveSegments: 12
+  })
+  var textGeometry2 = new THREE.TextBufferGeometry('pencil!', {
+    font: font,
+    size: 1,
+    height: 0.05,
+    curveSegments: 12
+  })
+
+  var textMaterial = new THREE.MeshBasicMaterial({ color: 0x333399 })
+
+  var text = new THREE.Mesh(textGeometry, textMaterial)
+  text.position.set(2, 2, 0)
+  scene.add(text)
+
+  var text2 = new THREE.Mesh(textGeometry2, textMaterial)
+  text2.position.set(2, 0, 0)
+  scene.add(text2)
+})
+
+// pencil object
+var geometry1 = new THREE.ConeBufferGeometry(0.4, 2, 5)
+var geometry2 = new THREE.ConeBufferGeometry(1, 2, 6)
+var geometry3 = new THREE.CylinderBufferGeometry(1, 1, 4, 6)
+var geometry4 = new THREE.CylinderBufferGeometry(1, 1, 1, 6)
+
 var material1 = new THREE.MeshBasicMaterial({ color: 0x333399 })
 var material2 = new THREE.MeshBasicMaterial({ color: 0xff9999 })
 var material3 = new THREE.MeshBasicMaterial({ color: 0xff9900 })
+var material4 = new THREE.MeshBasicMaterial({ color: 0xff5050 })
 
-var cube1 = new THREE.Mesh(lead, material1)
-cube1.position.set(0, 0, 0)
-scene.add(cube1)
+var lead = new THREE.Mesh(geometry1, material1)
+lead.position.set(0, -3, -2)
+lead.rotation.z = Math.PI
+scene.add(lead)
 
-var cube2 = new THREE.Mesh(geometry2, material2)
-cube2.position.set(0, 1, 0)
-scene.add(cube2)
+var casing = new THREE.Mesh(geometry2, material2)
+casing.position.set(0, -2, -2)
+casing.rotation.z = Math.PI
+scene.add(casing)
 
-var cube3 = new THREE.Mesh(geometry3, material3)
-cube3.position.set(0, 2, 0)
-scene.add(cube3)
+var shaft = new THREE.Mesh(geometry3, material3)
+shaft.position.set(0, 1, -2)
+scene.add(shaft)
+
+var eraser = new THREE.Mesh(geometry4, material4)
+eraser.position.set(0, 3, -2)
+scene.add(eraser)
 
 camera.position.z = 5
 
 function animate () {
   requestAnimationFrame(animate)
-  cube1.rotation.y += 0.01
-  cube2.rotation.y += 0.01
-  cube3.rotation.y += 0.01
+  lead.rotation.y += 0.01
+  casing.rotation.y += 0.01
+  shaft.rotation.y += 0.01
+  eraser.rotation.y += 0.01
 
   renderer.render(scene, camera)
 }
