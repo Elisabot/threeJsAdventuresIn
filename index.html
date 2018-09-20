@@ -12,7 +12,7 @@
     </style>
   </head>
   <body>
-    <script src="js/three.js"></script>
+    <script src="js/build/three.js"></script>
     <script>
 var scene = new THREE.Scene()
 scene.background = new THREE.Color(0xccffcc)
@@ -22,7 +22,33 @@ var renderer = new THREE.WebGLRenderer()
 renderer.setSize(window.innerWidth, window.innerHeight)
 document.body.appendChild(renderer.domElement)
 
-// cube object
+var loader = new THREE.FontLoader()
+loader.load('js/examples/fonts/droid/droid_sans_bold.typeface.json', function (font) {
+  var textGeometry = new THREE.TextBufferGeometry("it's a", {
+    font: font,
+    size: 1,
+    height: 0.05,
+    curveSegments: 12
+  })
+  var textGeometry2 = new THREE.TextBufferGeometry('pencil!', {
+    font: font,
+    size: 1,
+    height: 0.05,
+    curveSegments: 12
+  })
+
+  var textMaterial = new THREE.MeshBasicMaterial({ color: 0x333399 })
+
+  var text = new THREE.Mesh(textGeometry, textMaterial)
+  text.position.set(2, 2, 0)
+  scene.add(text)
+
+  var text2 = new THREE.Mesh(textGeometry2, textMaterial)
+  text2.position.set(2, 0, 0)
+  scene.add(text2)
+})
+
+// pencil object
 var geometry1 = new THREE.ConeBufferGeometry(0.4, 2, 5)
 var geometry2 = new THREE.ConeBufferGeometry(1, 2, 6)
 var geometry3 = new THREE.CylinderBufferGeometry(1, 1, 4, 6)
