@@ -1,14 +1,15 @@
+console.warn( "THREE.KMZLoader: As part of the transition to ES6 Modules, the files in 'examples/js' were deprecated in May 2020 (r117) and will be deleted in December 2020 (r124). You can find more information about developing using ES6 Modules in https://threejs.org/docs/#manual/en/introduction/Installation." );
 /**
  * @author mrdoob / http://mrdoob.com/
  */
 
 THREE.KMZLoader = function ( manager ) {
 
-	this.manager = ( manager !== undefined ) ? manager : THREE.DefaultLoadingManager;
+	THREE.Loader.call( this, manager );
 
 };
 
-THREE.KMZLoader.prototype = {
+THREE.KMZLoader.prototype = Object.assign( Object.create( THREE.Loader.prototype ), {
 
 	constructor: THREE.KMZLoader,
 
@@ -17,10 +18,30 @@ THREE.KMZLoader.prototype = {
 		var scope = this;
 
 		var loader = new THREE.FileLoader( scope.manager );
+		loader.setPath( scope.path );
 		loader.setResponseType( 'arraybuffer' );
+		loader.setRequestHeader( scope.requestHeader );
 		loader.load( url, function ( text ) {
 
-			onLoad( scope.parse( text ) );
+			try {
+
+				onLoad( scope.parse( text ) );
+
+			} catch ( e ) {
+
+				if ( onError ) {
+
+					onError( e );
+
+				} else {
+
+					console.error( e );
+
+				}
+
+				scope.manager.itemError( url );
+
+			}
 
 		}, onProgress, onError );
 
@@ -62,7 +83,7 @@ THREE.KMZLoader.prototype = {
 
 		//
 
-		var zip = new JSZip( data ); // eslint-disable-line no-undef
+		var zip = new JSZip( data );
 
 		if ( zip.files[ 'doc.kml' ] ) {
 
@@ -101,4 +122,4 @@ THREE.KMZLoader.prototype = {
 
 	}
 
-};
+} );

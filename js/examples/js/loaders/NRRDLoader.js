@@ -1,11 +1,15 @@
+console.warn( "THREE.NRRDLoader: As part of the transition to ES6 Modules, the files in 'examples/js' were deprecated in May 2020 (r117) and will be deleted in December 2020 (r124). You can find more information about developing using ES6 Modules in https://threejs.org/docs/#manual/en/introduction/Installation." );
+/*
+ *  three.js NRRD file loader
+ */
+
 THREE.NRRDLoader = function ( manager ) {
 
-	this.manager = ( manager !== undefined ) ? manager : THREE.DefaultLoadingManager;
-
+	THREE.Loader.call( this, manager );
 
 };
 
-THREE.NRRDLoader.prototype = {
+THREE.NRRDLoader.prototype = Object.assign( Object.create( THREE.Loader.prototype ), {
 
 	constructor: THREE.NRRDLoader,
 
@@ -14,10 +18,30 @@ THREE.NRRDLoader.prototype = {
 		var scope = this;
 
 		var loader = new THREE.FileLoader( scope.manager );
+		loader.setPath( scope.path );
 		loader.setResponseType( 'arraybuffer' );
+		loader.setRequestHeader( scope.requestHeader );
 		loader.load( url, function ( data ) {
 
-			onLoad( scope.parse( data ) );
+			try {
+
+				onLoad( scope.parse( data ) );
+
+			} catch ( e ) {
+
+				if ( onError ) {
+
+					onError( e );
+
+				} else {
+
+					console.error( e );
+
+				}
+
+				scope.manager.itemError( url );
+
+			}
 
 		}, onProgress, onError );
 
@@ -50,7 +74,7 @@ THREE.NRRDLoader.prototype = {
 
 			switch ( type ) {
 
-			// 1 byte data types
+				// 1 byte data types
 				case 'uchar':
 					break;
 				case 'schar':
@@ -165,16 +189,19 @@ THREE.NRRDLoader.prototype = {
 				}
 
 			}
+
 			if ( ! headerObject.isNrrd ) {
 
 				throw new Error( 'Not an NRRD file' );
 
 			}
+
 			if ( headerObject.encoding === 'bz2' || headerObject.encoding === 'bzip2' ) {
 
 				throw new Error( 'Bzip is not supported' );
 
 			}
+
 			if ( ! headerObject.vectors ) {
 
 				//if no space direction is set, let's use the identity
@@ -227,6 +254,7 @@ THREE.NRRDLoader.prototype = {
 				parsingFunction = parseFloat;
 
 			}
+
 			for ( var i = start; i < end; i ++ ) {
 
 				value = data[ i ];
@@ -243,17 +271,20 @@ THREE.NRRDLoader.prototype = {
 						resultIndex ++;
 
 					}
+
 					number = '';
 
 				}
 
 			}
+
 			if ( number !== '' ) {
 
 				result[ resultIndex ] = parsingFunction( number, base );
 				resultIndex ++;
 
 			}
+
 			return result;
 
 		}
@@ -277,6 +308,7 @@ THREE.NRRDLoader.prototype = {
 			}
 
 		}
+
 		// parse the header
 		parseHeader( _header );
 
@@ -306,6 +338,7 @@ THREE.NRRDLoader.prototype = {
 			_data = _copy;
 
 		}
+
 		// .. let's use the underlying array buffer
 		_data = _data.buffer;
 
@@ -388,6 +421,7 @@ THREE.NRRDLoader.prototype = {
 			volume.lowerThreshold = min;
 
 		}
+
 		if ( volume.upperThreshold === Infinity ) {
 
 			volume.upperThreshold = max;
@@ -406,6 +440,7 @@ THREE.NRRDLoader.prototype = {
 			start = 0;
 
 		}
+
 		if ( end === undefined ) {
 
 			end = array.length;
@@ -510,12 +545,14 @@ THREE.NRRDLoader.prototype = {
 				var _i, _len, _ref, _results;
 				_ref = data.split( /\s+/ );
 				_results = [];
+
 				for ( _i = 0, _len = _ref.length; _i < _len; _i ++ ) {
 
 					i = _ref[ _i ];
 					_results.push( parseInt( i, 10 ) );
 
 				}
+
 				return _results;
 
 			} )();
@@ -542,6 +579,7 @@ THREE.NRRDLoader.prototype = {
 
 				var _i, _len, _results;
 				_results = [];
+
 				for ( _i = 0, _len = parts.length; _i < _len; _i ++ ) {
 
 					v = parts[ _i ];
@@ -550,17 +588,20 @@ THREE.NRRDLoader.prototype = {
 						var _j, _len2, _ref, _results2;
 						_ref = v.slice( 1, - 1 ).split( /,/ );
 						_results2 = [];
+
 						for ( _j = 0, _len2 = _ref.length; _j < _len2; _j ++ ) {
 
 							f = _ref[ _j ];
 							_results2.push( parseFloat( f ) );
 
 						}
+
 						return _results2;
 
 					} )() );
 
 				}
+
 				return _results;
 
 			} )();
@@ -581,6 +622,7 @@ THREE.NRRDLoader.prototype = {
 					_results.push( parseFloat( f ) );
 
 				}
+
 				return _results;
 
 			} )();
@@ -588,4 +630,4 @@ THREE.NRRDLoader.prototype = {
 		}
 	}
 
-};
+} );

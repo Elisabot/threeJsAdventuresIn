@@ -1,3 +1,4 @@
+console.warn( "THREE.MMDLoader: As part of the transition to ES6 Modules, the files in 'examples/js' were deprecated in May 2020 (r117) and will be deleted in December 2020 (r124). You can find more information about developing using ES6 Modules in https://threejs.org/docs/#manual/en/introduction/Installation." );
 /**
  * @author takahiro / https://github.com/takahirox
  *
@@ -13,7 +14,7 @@
  * VPD is a posing data format used in MMD(Miku Miku Dance).
  *
  * MMD official site
- *  - http://www.geocities.jp/higuchuu4/index_e.htm
+ *  - https://sites.google.com/view/evpvp/
  *
  * PMD, VMD format (in Japanese)
  *  - http://blog.goo.ne.jp/torisu_tetosuki/e/209ad341d3ece2b1b4df24abf619d6e4
@@ -36,7 +37,7 @@ THREE.MMDLoader = ( function () {
 	 */
 	function MMDLoader( manager ) {
 
-		this.manager = ( manager !== undefined ) ? manager : THREE.DefaultLoadingManager;
+		THREE.Loader.call( this, manager );
 
 		this.loader = new THREE.FileLoader( this.manager );
 
@@ -46,19 +47,17 @@ THREE.MMDLoader = ( function () {
 
 	}
 
-	MMDLoader.prototype = {
+	MMDLoader.prototype = Object.assign( Object.create( THREE.Loader.prototype ), {
 
 		constructor: MMDLoader,
 
-		crossOrigin: 'anonymous',
-
 		/**
-		 * @param {string} value
+		 * @param {string} animationPath
 		 * @return {THREE.MMDLoader}
 		 */
-		setCrossOrigin: function ( crossOrigin ) {
+		setAnimationPath: function ( animationPath ) {
 
-			this.crossOrigin = crossOrigin;
+			this.animationPath = animationPath;
 			return this;
 
 		},
@@ -77,7 +76,24 @@ THREE.MMDLoader = ( function () {
 
 			var builder = this.meshBuilder.setCrossOrigin( this.crossOrigin );
 
-			var texturePath = THREE.LoaderUtils.extractUrlBase( url );
+			// resource path
+
+			var resourcePath;
+
+			if ( this.resourcePath !== '' ) {
+
+				resourcePath = this.resourcePath;
+
+			} else if ( this.path !== '' ) {
+
+				resourcePath = this.path;
+
+			} else {
+
+				resourcePath = THREE.LoaderUtils.extractUrlBase( url );
+
+			}
+
 			var modelExtension = this._extractExtension( url ).toLowerCase();
 
 			// Should I detect by seeing header?
@@ -91,7 +107,7 @@ THREE.MMDLoader = ( function () {
 
 			this[ modelExtension === 'pmd' ? 'loadPMD' : 'loadPMX' ]( url, function ( data ) {
 
-				onLoad(	builder.build( data, texturePath, onProgress, onError )	);
+				onLoad(	builder.build( data, resourcePath, onProgress, onError )	);
 
 			}, onProgress, onError );
 
@@ -167,7 +183,9 @@ THREE.MMDLoader = ( function () {
 
 			this.loader
 				.setMimeType( undefined )
+				.setPath( this.path )
 				.setResponseType( 'arraybuffer' )
+				.setRequestHeader( this.requestHeader )
 				.load( url, function ( buffer ) {
 
 					onLoad( parser.parsePmd( buffer, true ) );
@@ -190,7 +208,9 @@ THREE.MMDLoader = ( function () {
 
 			this.loader
 				.setMimeType( undefined )
+				.setPath( this.path )
 				.setResponseType( 'arraybuffer' )
+				.setRequestHeader( this.requestHeader )
 				.load( url, function ( buffer ) {
 
 					onLoad( parser.parsePmx( buffer, true ) );
@@ -219,7 +239,9 @@ THREE.MMDLoader = ( function () {
 
 			this.loader
 				.setMimeType( undefined )
-				.setResponseType( 'arraybuffer' );
+				.setPath( this.animationPath )
+				.setResponseType( 'arraybuffer' )
+				.setRequestHeader( this.requestHeader );
 
 			for ( var i = 0, il = urls.length; i < il; i ++ ) {
 
@@ -250,7 +272,9 @@ THREE.MMDLoader = ( function () {
 
 			this.loader
 				.setMimeType( isUnicode ? undefined : 'text/plain; charset=shift_jis' )
+				.setPath( this.animationPath )
 				.setResponseType( 'text' )
+				.setRequestHeader( this.requestHeader )
 				.load( url, function ( text ) {
 
 					onLoad( parser.parseVpd( text, true ) );
@@ -286,7 +310,7 @@ THREE.MMDLoader = ( function () {
 
 		}
 
-	};
+	} );
 
 	// Utilities
 
@@ -340,20 +364,23 @@ THREE.MMDLoader = ( function () {
 
 		/**
 		 * @param {Object} data - parsed PMD/PMX data
-		 * @param {string} texturePath
+		 * @param {string} resourcePath
 		 * @param {function} onProgress
 		 * @param {function} onError
 		 * @return {THREE.SkinnedMesh}
 		 */
-		build: function ( data, texturePath, onProgress, onError ) {
+		build: function ( data, resourcePath, onProgress, onError ) {
 
 			var geometry = this.geometryBuilder.build( data );
 			var material = this.materialBuilder
 				.setCrossOrigin( this.crossOrigin )
-				.setTexturePath( texturePath )
+				.setResourcePath( resourcePath )
 				.build( data, geometry, onProgress, onError );
 
 			var mesh = new THREE.SkinnedMesh( geometry, material );
+
+			var skeleton = new THREE.Skeleton( initBones( mesh ) );
+			mesh.bind( skeleton );
 
 			// console.log( mesh ); // for console debug
 
@@ -362,6 +389,70 @@ THREE.MMDLoader = ( function () {
 		}
 
 	};
+
+	// TODO: Try to remove this function
+
+	function initBones( mesh ) {
+
+		var geometry = mesh.geometry;
+
+		var bones = [], bone, gbone;
+		var i, il;
+
+		if ( geometry && geometry.bones !== undefined ) {
+
+			// first, create array of 'Bone' objects from geometry data
+
+			for ( i = 0, il = geometry.bones.length; i < il; i ++ ) {
+
+				gbone = geometry.bones[ i ];
+
+				// create new 'Bone' object
+
+				bone = new THREE.Bone();
+				bones.push( bone );
+
+				// apply values
+
+				bone.name = gbone.name;
+				bone.position.fromArray( gbone.pos );
+				bone.quaternion.fromArray( gbone.rotq );
+				if ( gbone.scl !== undefined ) bone.scale.fromArray( gbone.scl );
+
+			}
+
+			// second, create bone hierarchy
+
+			for ( i = 0, il = geometry.bones.length; i < il; i ++ ) {
+
+				gbone = geometry.bones[ i ];
+
+				if ( ( gbone.parent !== - 1 ) && ( gbone.parent !== null ) && ( bones[ gbone.parent ] !== undefined ) ) {
+
+					// subsequent bones in the hierarchy
+
+					bones[ gbone.parent ].add( bones[ i ] );
+
+				} else {
+
+					// topmost bone, immediate child of the skinned mesh
+
+					mesh.add( bones[ i ] );
+
+				}
+
+			}
+
+		}
+
+		// now the bones are part of the scene graph and children of the skinned mesh.
+		// let's update the corresponding matrices
+
+		mesh.updateMatrixWorld( true );
+
+		return bones;
+
+	}
 
 	//
 
@@ -819,11 +910,11 @@ THREE.MMDLoader = ( function () {
 
 			var geometry = new THREE.BufferGeometry();
 
-			geometry.addAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
-			geometry.addAttribute( 'normal', new THREE.Float32BufferAttribute( normals, 3 ) );
-			geometry.addAttribute( 'uv', new THREE.Float32BufferAttribute( uvs, 2 ) );
-			geometry.addAttribute( 'skinIndex', new THREE.Uint16BufferAttribute( skinIndices, 4 ) );
-			geometry.addAttribute( 'skinWeight', new THREE.Float32BufferAttribute( skinWeights, 4 ) );
+			geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
+			geometry.setAttribute( 'normal', new THREE.Float32BufferAttribute( normals, 3 ) );
+			geometry.setAttribute( 'uv', new THREE.Float32BufferAttribute( uvs, 2 ) );
+			geometry.setAttribute( 'skinIndex', new THREE.Uint16BufferAttribute( skinIndices, 4 ) );
+			geometry.setAttribute( 'skinWeight', new THREE.Float32BufferAttribute( skinWeights, 4 ) );
 			geometry.setIndex( indices );
 
 			for ( var i = 0, il = groups.length; i < il; i ++ ) {
@@ -836,6 +927,7 @@ THREE.MMDLoader = ( function () {
 
 			geometry.morphTargets = morphTargets;
 			geometry.morphAttributes.position = morphPositions;
+			geometry.morphTargetsRelative = false;
 
 			geometry.userData.MMD = {
 				bones: bones,
@@ -874,7 +966,7 @@ THREE.MMDLoader = ( function () {
 
 		crossOrigin: 'anonymous',
 
-		texturePath: undefined,
+		resourcePath: undefined,
 
 		/**
 		 * @param {string} crossOrigin
@@ -888,12 +980,12 @@ THREE.MMDLoader = ( function () {
 		},
 
 		/**
-		 * @param {string} texturePath
+		 * @param {string} resourcePath
 		 * @return {MaterialBuilder}
 		 */
-		setTexturePath: function ( texturePath ) {
+		setResourcePath: function ( resourcePath ) {
 
-			this.texturePath = texturePath;
+			this.resourcePath = resourcePath;
 			return this;
 
 		},
@@ -905,7 +997,7 @@ THREE.MMDLoader = ( function () {
 		 * @param {function} onError
 		 * @return {Array<THREE.MeshToonMaterial>}
 		 */
-		build: function ( data, geometry, onProgress, onError ) {
+		build: function ( data, geometry /*, onProgress, onError */ ) {
 
 			var materials = [];
 
@@ -946,7 +1038,6 @@ THREE.MMDLoader = ( function () {
 
 				params.skinning = geometry.bones.length > 0 ? true : false;
 				params.morphTargets = geometry.morphTargets.length > 0 ? true : false;
-				params.lights = true;
 				params.fog = true;
 
 				// blend
@@ -989,8 +1080,7 @@ THREE.MMDLoader = ( function () {
 
 							params.envMap = this._loadTexture(
 								fileNames[ 1 ],
-								textures,
-								{ sphericalReflectionMapping: true }
+								textures
 							);
 
 							params.combine = extension === '.sph'
@@ -1041,7 +1131,7 @@ THREE.MMDLoader = ( function () {
 
 						params.envMap = this._loadTexture(
 							data.textures[ material.envTextureIndex ],
-							textures, { sphericalReflectionMapping: true }
+							textures
 						);
 
 						params.combine = material.envFlag === 1
@@ -1198,7 +1288,7 @@ THREE.MMDLoader = ( function () {
 
 				try {
 
-					index = parseInt( filePath.match( 'toon([0-9]{2})\.bmp$' )[ 1 ] );
+					index = parseInt( filePath.match( /toon([0-9]{2})\.bmp$/ )[ 1 ] );
 
 				} catch ( e ) {
 
@@ -1213,13 +1303,13 @@ THREE.MMDLoader = ( function () {
 
 			} else {
 
-				fullPath = this.texturePath + filePath;
+				fullPath = this.resourcePath + filePath;
 
 			}
 
 			if ( textures[ fullPath ] !== undefined ) return textures[ fullPath ];
 
-			var loader = THREE.Loader.Handlers.get( fullPath );
+			var loader = this.manager.getHandler( fullPath );
 
 			if ( loader === null ) {
 
@@ -1238,6 +1328,9 @@ THREE.MMDLoader = ( function () {
 
 					t.image = scope._getRotatedImage( t.image );
 
+					t.magFilter = THREE.NearestFilter;
+					t.minFilter = THREE.NearestFilter;
+
 				}
 
 				t.flipY = false;
@@ -1253,12 +1346,6 @@ THREE.MMDLoader = ( function () {
 				delete texture.readyCallbacks;
 
 			}, onProgress, onError );
-
-			if ( params.sphericalReflectionMapping === true ) {
-
-				texture.mapping = THREE.SphericalReflectionMapping;
-
-			}
 
 			texture.readyCallbacks = [];
 
